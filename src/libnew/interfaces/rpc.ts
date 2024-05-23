@@ -26,7 +26,7 @@ export interface IRPC {
    * @param cmd The command to listen for.
    * @param handler The event handler function.
    */
-  on<TEvent extends keyof RpcEvents>(cmd: TEvent, handler: (event: TEvent, data: RpcEvents[TEvent]) => void): void;
+  on<TEvent extends keyof RpcEvents>(cmd: TEvent, handler: (data: RpcEvents[TEvent]) => void): IRPC;
 
   /**
    * Unregisters the event handler for the specified command.
@@ -196,7 +196,7 @@ export type RpcEvents = {
     metadata?: string;
     state: {
       active: boolean;
-      scaling?: StreamRemoteScalingType
+      scaling?: StreamRemoteScalingType;
     };
   };
   'room.tracks.removed': {

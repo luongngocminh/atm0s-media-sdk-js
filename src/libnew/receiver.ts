@@ -26,7 +26,7 @@ export class StreamReceiver extends TypedEventEmitter<IStreamReceiverCallbacks> 
   }
 
   get stream() {
-    return this._track.stream;
+    return this._track.source;
   }
 
   get kind() {
@@ -65,21 +65,26 @@ export class StreamReceiver extends TypedEventEmitter<IStreamReceiverCallbacks> 
   };
 
   private _handleOnTrackAdded = (track: MediaStreamTrack) => {
-    this.logger.log('track added', this._track.stream);
+    this.logger.log('track added', this._track.source);
     this.emit('track_added', track);
     if (this._rpc.connected) this._ready();
   };
 
-  private _handleStats = (_: string, event: ReceiverStats & { id: string }) => {
+  private _handleStats = (event: ReceiverStats & { id: string }) => {
     if (event.id !== this.id) return;
 
     this.emit('stats', event);
   };
 
-  private _handleStateChange = (
-    _: string,
-    { id, state, source }: { id: string; state: StreamReceiverState; source?: ReceiverStateSource },
-  ) => {
+  private _handleStateChange = ({
+    id,
+    state,
+    source,
+  }: {
+    id: string;
+    state: StreamReceiverState;
+    source?: ReceiverStateSource;
+  }) => {
     if (id !== this.id) return;
 
     this._setState(state);
@@ -126,7 +131,7 @@ export class StreamReceiver extends TypedEventEmitter<IStreamReceiverCallbacks> 
   async switch(remote: RemoteStream, priority: number = 50) {
     this.logger.log('switch stream', remote.trackId, remote.peerId, this.id);
     await this.internalReady();
-    if (this._track.stream) {
+    if (this._track.source) {
       this._setState(StreamReceiverState.Waiting);
       const res = await this._rpc.request('session.receivers.switch', {
         id: this.id,
@@ -147,7 +152,7 @@ export class StreamReceiver extends TypedEventEmitter<IStreamReceiverCallbacks> 
   async limit(limit: StreamLimit): Promise<boolean> {
     this.logger.log('limit stream', limit.priority, limit.maxSpatial, limit.maxTemporal);
     await this.internalReady();
-    if (this._track.stream) {
+    if (this._track.source) {
       const res = await this._rpc.request('session.receivers.limit', {
         id: this.id,
         priority: limit.priority,

@@ -38,7 +38,7 @@ export class StreamSender extends TypedEventEmitter<IStreamSenderCallbacks> {
   }
 
   get stream() {
-    return this._track.stream;
+    return this._track.source;
   }
 
   get kind() {
@@ -56,7 +56,7 @@ export class StreamSender extends TypedEventEmitter<IStreamSenderCallbacks> {
     this._rpc.on('session.senders.state', this._handleStateChange);
   }
 
-  private _handleStateChange = (_: string, { id, state }: { id: string; state: StreamSenderState }) => {
+  private _handleStateChange = ({ id, state }: { id: string; state: StreamSenderState }) => {
     if (id !== this.id) {
       return;
     }

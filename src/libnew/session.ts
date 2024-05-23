@@ -4,7 +4,7 @@ import { StreamKinds } from './utils/types';
 import { debounce } from 'ts-debounce';
 import { TypedEventEmitter } from './utils/typed-event-emitter';
 import { getLogger, setLogLevel } from './utils/logger';
-import type { IRPC, RpcEvents } from './interfaces/rpc';
+import type { IRPC } from './interfaces/rpc';
 import { RPC } from './core/rpc';
 import type { ISessionCallbacks, ISessionConfig, SessionTrackState } from './interfaces/session';
 import { RemoteStream } from './remote';
@@ -15,12 +15,10 @@ import { Peer } from './peer';
 import { StreamSenderState } from './interfaces/sender';
 
 export class Session extends TypedEventEmitter<ISessionCallbacks> {
-  peers = new Map<string, Peer>();
+  public peers = new Map<string, Peer>();
 
   private _audioSenders = new Map<string, StreamSender>();
   private _videoSenders = new Map<string, StreamSender>();
-
-  // private _streams = new StreamMapping();
 
   private _audioReceivers: StreamReceiver[] = [];
   private _videoReceivers: StreamReceiver[] = [];
@@ -93,11 +91,13 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
     //   }
     //   this._mixminus = new ReceiverMixMinusAudio('default', this, this._rpc, _cfg.mixMinusAudio.elements);
     // }
-    this._rpc.on('room.tracks.added', this.onRoomTrackEvent);
-    this._rpc.on('room.tracks.updated', this.onRoomTrackEvent);
-    this._rpc.on('room.tracks.removed', this.onRoomTrackEvent);
-    this._rpc.on('room.peers.added', this.onPeerAdded);
-    this._rpc.on('room.peers.removed', this.onPeerRemoved);
+    this._rpc
+      .on('room.tracks.added', (data) => this.onRoomTrackEvent('added', data))
+      .on('room.tracks.updated', (data) => this.onRoomTrackEvent('updated', data))
+      .on('room.tracks.removed', (data) => this.onRoomTrackEvent('removed', data))
+      .on('room.peers.added', this.onPeerAdded)
+      .on('room.peers.removed', this.onPeerRemoved);
+
     this._cfg.senders?.map((s) => {
       if (s.stream) {
         const senderTrack = this._socket.createSenderTrack(s.kind, s);
@@ -337,7 +337,7 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
   }
 
   private onRoomTrackEvent = (
-    event: keyof RpcEvents,
+    event: 'added' | 'updated' | 'removed',
     params: {
       kind: StreamKinds;
       peer_id: string;
@@ -358,8 +358,8 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
     const isMyStream = params.peer_id === this._cfg.peerId;
 
     switch (event) {
-      case 'room.tracks.added':
-      case 'room.tracks.updated':
+      case 'added':
+      case 'updated':
         if (this._remotes.has(key)) {
           const remote = this._remotes.get(key)!;
           remote.updateState(params.state!);
@@ -369,7 +369,6 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
           }
         } else {
           const remote = new RemoteStream(params.kind, params.source!.id, params.peer_id, params.track_id);
-          // this._streams.add(params.peer_hash, params.source?.id, remote);
           remote.updateState(params.state!);
           if (this.peers.has(params.peer_id)) {
             this.peers.get(params.peer_id)!.updateRemote(remote);
@@ -379,10 +378,9 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
         }
 
         break;
-      case 'room.tracks.removed':
+      case 'removed':
         if (this._remotes.has(key)) {
           const remote = this._remotes.get(key)!;
-          // this._streams.remove(params.peer_hash, params.stream);
           this._remotes.delete(key);
           if (this.peers.has(params.peer_id)) {
             this.peers.get(params.peer_id)!.removeRemote(params.track_id);
@@ -393,8 +391,8 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
     }
   };
 
-  private onPeerAdded = (event: keyof RpcEvents, params: { peer_id: string; metadata?: string }) => {
-    this.logger.info('peer added:', event, params);
+  private onPeerAdded = (params: { peer_id: string; metadata?: string }) => {
+    this.logger.info('peer added:', params);
     if (!this.peers.has(params.peer_id)) {
       const peer = new Peer(params.peer_id, params.metadata);
       this.peers.set(params.peer_id, peer);
@@ -402,8 +400,8 @@ export class Session extends TypedEventEmitter<ISessionCallbacks> {
     }
   };
 
-  private onPeerRemoved = (event: keyof RpcEvents, params: { peer_id: string }) => {
-    this.logger.info('peer removed:', event, params);
+  private onPeerRemoved = (params: { peer_id: string }) => {
+    this.logger.info('peer removed:', params);
     if (this.peers.has(params.peer_id)) {
       const peer = this.peers.get(params.peer_id)!;
       this.peers.delete(params.peer_id);

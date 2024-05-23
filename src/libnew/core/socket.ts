@@ -5,11 +5,7 @@ import pako from 'pako';
 import { ReceiverTrack, SenderTrack } from './tracks';
 import { getLogger } from '../utils/logger';
 import type { IMediaGatewayConnector } from '../interfaces/gateway';
-import {
-  type IRealtimeSocketCallbacks,
-  type RealtimeSocketOptions,
-  RealtimeSocketState,
-} from '../interfaces/rtsocket';
+import { type IRealtimeSocketCallbacks, type RealtimeSocketOptions, RealtimeSocketState } from '../interfaces/rtsocket';
 import type { ISessionConfig } from '../interfaces/session';
 import type { SenderOptions } from '../interfaces/sender';
 import { configPeerLatencyMode } from '../utils/latency-mode';
@@ -53,15 +49,14 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
         this.logger.log('connect :: no stream found');
         return;
       }
-      const stream = event.streams[0];
+      const stream = event.streams[0]!;
       const track = event.track;
 
       this.logger.log('connect :: received track:', track, stream);
 
-      for (const receiver of this._recvStreams.values()) {
-        if (receiver.uuid === stream?.id && receiver.stream.getTracks().length === 0 && receiver.kind === track.kind) {
-          receiver.addTrack(track);
-        }
+      const recvStream = this._recvStreams.get(stream.id);
+      if (recvStream && !recvStream.hasTrack && recvStream.kind === track.kind) {
+        recvStream.addTrack(track);
       }
     };
 
@@ -140,9 +135,9 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
         senders: this.getActiveSendTracks().map((s) => ({
           kind: s.kind,
           id: s.uuid,
-          source: s.stream?.id
+          source: s.source?.id
             ? {
-                id: s.stream.id,
+                id: s.source.id,
                 screen: s.screen,
               }
             : undefined,

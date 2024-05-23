@@ -9,7 +9,7 @@ import type { ReceiverConfig } from '../interfaces/receiver';
 export class SenderTrack extends TypedEventEmitter<ISenderTrackCallbacks> {
   private static seed = 0;
   public uuid: string;
-  public stream: MediaStream | null = null;
+  public source: MediaStream | null = null;
   private _label: string | undefined;
   public screen: boolean;
   public simulcast: boolean;
@@ -20,7 +20,7 @@ export class SenderTrack extends TypedEventEmitter<ISenderTrackCallbacks> {
     return this.trackId ? this._label || this.getTrack()?.label || 'unknown' : undefined;
   }
   public get active() {
-    return this.stream?.active;
+    return this.source?.active;
   }
 
   get trackId() {
@@ -33,7 +33,7 @@ export class SenderTrack extends TypedEventEmitter<ISenderTrackCallbacks> {
     opts?: SenderOptions,
   ) {
     super();
-    this.stream = opts?.stream || new MediaStream();
+    this.source = opts?.stream || new MediaStream();
     this.uuid = `sender-${kind}-${SenderTrack.seed++}`;
     this._label = opts?.label;
     this.screen = opts?.screen || false;
@@ -61,10 +61,10 @@ export class SenderTrack extends TypedEventEmitter<ISenderTrackCallbacks> {
     if (label && label !== this.label) {
       this._label = label;
     }
-    if (this.stream && stream === this.stream) {
+    if (this.source && stream === this.source) {
       return;
     }
-    this.stream = stream;
+    this.source = stream;
     this.transceiver.sender.replaceTrack(getTrack(stream, this.kind) || null);
 
     if (this.contentHint && this.getTrack()) {
@@ -73,16 +73,16 @@ export class SenderTrack extends TypedEventEmitter<ISenderTrackCallbacks> {
   }
 
   getTrack() {
-    return getTrack(this.stream, this.kind);
+    return getTrack(this.source, this.kind);
   }
 
   stop() {
-    this.stream?.getTracks().forEach((track) => track.stop());
+    this.source?.getTracks().forEach((track) => track.stop());
     this.emit('stopped');
   }
 
   pause() {
-    this.stream?.getTracks().forEach((track) => (track.enabled = false));
+    this.source?.getTracks().forEach((track) => (track.enabled = false));
   }
 }
 
@@ -90,7 +90,7 @@ export class ReceiverTrack extends TypedEventEmitter<IReceiverTrackCallbacks> {
   private static seed = 0;
   public uuid: string;
   public hasTrack: boolean = false;
-  public stream: MediaStream;
+  public source: MediaStream;
   get trackId() {
     return this.getTrack()?.id;
   }
@@ -100,7 +100,7 @@ export class ReceiverTrack extends TypedEventEmitter<IReceiverTrackCallbacks> {
     opts?: ReceiverConfig,
   ) {
     super();
-    this.stream = new MediaStream();
+    this.source = new MediaStream();
     this.uuid = `receiver-${this.kind}-${ReceiverTrack.seed++}`;
     if (transceiver?.receiver) {
       if (opts?.codecs && kind === StreamKinds.VIDEO) {
@@ -113,21 +113,21 @@ export class ReceiverTrack extends TypedEventEmitter<IReceiverTrackCallbacks> {
   }
 
   getTrack() {
-    return getTrack(this.stream, this.kind);
+    return getTrack(this.source, this.kind);
   }
 
   addTrack(track: MediaStreamTrack) {
-    this.stream.addTrack(track);
+    this.source.addTrack(track);
     this.hasTrack = true;
     this.emit('track_added', track);
   }
 
   stop() {
-    this.stream.getTracks().forEach((track) => track.stop());
+    this.source.getTracks().forEach((track) => track.stop());
     this.emit('stopped');
   }
 
   pause() {
-    this.stream.getTracks().forEach((track) => (track.enabled = false));
+    this.source.getTracks().forEach((track) => (track.enabled = false));
   }
 }

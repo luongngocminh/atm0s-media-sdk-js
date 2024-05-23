@@ -12,7 +12,7 @@ export interface IPeerInfo {
 }
 
 export class Peer extends TypedEventEmitter<IPeerCallbacks> {
-  private _remotes = new Map<string, RemoteStream>();
+  public remotes = new Map<string, RemoteStream>();
 
   constructor(
     public readonly id: string,
@@ -22,12 +22,12 @@ export class Peer extends TypedEventEmitter<IPeerCallbacks> {
   }
 
   updateRemote(remote: RemoteStream) {
-    this._remotes.set(remote.trackId, remote);
+    this.remotes.set(remote.trackId, remote);
     this.emit('stream.updated', remote);
   }
 
   removeRemote(trackId: string) {
-    if (this._remotes.delete(trackId)) {
+    if (this.remotes.delete(trackId)) {
       this.emit('stream.removed', trackId);
     }
   }

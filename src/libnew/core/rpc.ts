@@ -150,8 +150,9 @@ export class RPC implements IRPC {
     });
   }
 
-  on<TEvent extends keyof RpcEvents>(cmd: TEvent, handler: (event: TEvent, data: RpcEvents[TEvent]) => void): void {
+  on<TEvent extends keyof RpcEvents>(cmd: TEvent, handler: (data: RpcEvents[TEvent]) => void) {
     this._handlers.set(cmd, [...(this._handlers.get(cmd) || []), handler]);
+    return this;
   }
 
   off(cmd: keyof RpcEvents, handler: AnyFunction): void {

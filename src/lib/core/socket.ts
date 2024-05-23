@@ -27,7 +27,7 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
   private _recvStreams = new Map<string, IReceiverTrack>();
 
   private _msg_encoder = new TextEncoder();
-  private _connected = false;
+  private _wasConnected = false;
 
   private _nodeId: number | undefined;
   private _connId: string | undefined;
@@ -92,7 +92,7 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
       this.logger.log('ice connection state changed:', this._pc.iceConnectionState);
       switch (this._pc.iceConnectionState) {
         case 'connected':
-          if (this._connected) {
+          if (this._wasConnected) {
             this.setConnState(RealtimeSocketState.Reconnected);
           }
           break;
@@ -109,7 +109,7 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
     };
     this._dc.onopen = () => {
       this.setDcState(RealtimeSocketState.Connected);
-      this._connected = true;
+      this._wasConnected = true;
       this.logger.log('datachannel connect :: opended');
     };
     this._dc.onerror = (err) => {
@@ -202,7 +202,7 @@ export class RealtimeSocket extends TypedEventEmitter<IRealtimeSocketCallbacks> 
     let tries = 0;
     const maxTries = 20;
 
-    while (tries++ < maxTries && this._connected) {
+    while (tries++ < maxTries && this._wasConnected) {
       try {
         const res = await this._connector.restartIce(serverUrl, this._nodeId!, this._connId!, offer.sdp!);
         if (!res.status) {
